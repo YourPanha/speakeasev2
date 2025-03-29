@@ -58,13 +58,16 @@ import pickle
 import mediapipe as mp
 import cv2
 
+# Initialize MediaPipe Hands
 mp_hands = mp.solutions.hands
-mp_drawing = mp.solutions.drawing_utils
-mp_drawing_styles = mp.solutions.drawing_styles
-
-hands = mp_hands.Hands(static_image_mode=True, min_detection_confidence=0.3)
+hands = mp_hands.Hands(
+    static_image_mode=True, 
+    min_detection_confidence=0.3,
+    model_complexity=1  # Reduce complexity to avoid projection issues
+)
 
 DATA_DIR = './data'
+IMG_SIZE = 640  # Ensure consistency with dataset collection
 
 data = []
 labels = []
@@ -84,21 +87,22 @@ for dir_ in os.listdir(DATA_DIR):
             print(f"Warning: Unable to read image {img_path}")
             continue
 
-        img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        img_resized = cv2.resize(img, (IMG_SIZE, IMG_SIZE))  # Ensure image is square
+        img_rgb = cv2.cvtColor(img_resized, cv2.COLOR_BGR2RGB)
         results = hands.process(img_rgb)
 
         if results.multi_hand_landmarks:
             for hand_landmarks in results.multi_hand_landmarks:
                 for i in range(len(hand_landmarks.landmark)):
-                    x_.append(hand_landmarks.landmark[i].x)
-                    y_.append(hand_landmarks.landmark[i].y)
+                    x_.append(hand_landmarks.landmark[i].x * IMG_SIZE)
+                    y_.append(hand_landmarks.landmark[i].y * IMG_SIZE)
 
                 if x_ and y_:  # Ensure non-empty lists before calling min()
                     min_x, min_y = min(x_), min(y_)
 
                     for i in range(len(hand_landmarks.landmark)):
-                        data_aux.append(hand_landmarks.landmark[i].x - min_x)
-                        data_aux.append(hand_landmarks.landmark[i].y - min_y)
+                        data_aux.append(hand_landmarks.landmark[i].x * IMG_SIZE - min_x)
+                        data_aux.append(hand_landmarks.landmark[i].y * IMG_SIZE - min_y)
 
                     data.append(data_aux)
                     labels.append(dir_)
@@ -109,4 +113,3 @@ if data and labels:
     print("Dataset successfully saved as data.pickle")
 else:
     print("No valid hand landmarks found. Check your images and detection settings.")
-
