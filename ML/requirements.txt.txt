@@ -1,0 +1,20 @@
+numpy
+opencv-python
+pyttsx3
+tensorflow
+cvzone
+enchant
+pillow
+mediapipe
+
+Required Dependencies:
+numpy
+math (Python inbuilt, no need to add)
+cv2 (opencv-python)
+os, sys, traceback, time (Python inbuilt, no need to add)
+pyttsx3
+tensorflow
+cvzone
+enchant
+tkinter (Python standard, no need to add)
+PIL (pillow)

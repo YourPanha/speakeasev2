@@ -1,0 +1,8 @@
+__pycache__/
+*.h5
+venv/
+.DS_Store
+*.log
+.env
+myenv
+AtoZ_3.1
