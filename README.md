@@ -62,7 +62,7 @@ A **camera-based AI app** that translates hand signs into **text or speech** in 
 
 ## 🔗 References & Links  
 - [Indian Sign Language Facts - Amit Gautam](https://www.linkedin.com/pulse/indian-sign-language-facts-amit-gautam)  
-- **Event**: Code Kshetra 2.0 Hackathon 2025 🏅  
+ 
 
 ---
 
