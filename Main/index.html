@@ -358,31 +358,31 @@
         }
 
         // Assistant functionality
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             const button = document.getElementById('assistantButton');
             const container = document.getElementById('assistantContainer');
             const closeBtn = document.getElementById('assistantClose');
             const overlay = document.getElementById('assistantOverlay');
-            
+
             // Toggle assistant when button is clicked
-            button.addEventListener('click', function() {
+            button.addEventListener('click', function () {
                 if (container.style.display === 'block') {
                     hideAssistant();
                 } else {
                     showAssistant();
                 }
             });
-            
+
             // Close assistant when X is clicked
-            closeBtn.addEventListener('click', function() {
+            closeBtn.addEventListener('click', function () {
                 hideAssistant();
             });
-            
+
             // Close assistant when clicking outside
-            overlay.addEventListener('click', function() {
+            overlay.addEventListener('click', function () {
                 hideAssistant();
             });
-            
+
             function showAssistant() {
                 container.style.display = 'block';
                 overlay.style.display = 'block';
@@ -392,7 +392,7 @@
                     container.style.transform = 'translateY(0)';
                 }, 10);
             }
-            
+
             function hideAssistant() {
                 container.style.opacity = '0';
                 container.style.transform = 'translateY(20px)';
