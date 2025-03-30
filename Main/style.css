@@ -106,8 +106,8 @@ background-color: white;
 
 .text{
     position: fixed;
-    top:300px;
-    left:800px;
+    top:160px;
+    left:780px;
     font-size: larger;
     font-family: poppins;
 }
@@ -118,26 +118,15 @@ background-color: white;
     
     position: fixed;
     left: 280px;
-    top: 200px;
+    top: 130px;
 }
  
 
-/* .button1{
-    position: relative;
-    left: 1400px;
-    top: 100px;
-    padding: 12px;
-    font-size: medium;
-    font-weight: bold;
-    border-radius: 10px;
-    background-color: rgba(93, 106, 182, 0.808);
-    
-} */
 
 .button1 {
     position: relative;
-    left: 1400px;
-    top: 80px;
+    left: 1450px;
+    top: 0px;
     padding: 12px 24px;
     font-size: 18px;
     font-weight: bold;
@@ -168,7 +157,7 @@ background-color: white;
 }
 .line {
     position: relative;
-    top: 380px;
+    top: 280px;
     width: 80%;
     height: 2px;
     background-color: black;
@@ -177,8 +166,8 @@ background-color: white;
 
 .btn {
     position: relative;
-    left: 1400px;
-    top: 100px;
+    left: 1450px;
+    top: 50px;
     display: inline-block;
     padding: 12px 40px;
     background: linear-gradient(135deg, #4A90E2, #0052D4);
@@ -210,5 +199,5 @@ background-color: white;
 
 .mm{
     height: 200px;
-    width: 600px;
+    width: 580px;
 }
