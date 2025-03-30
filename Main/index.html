@@ -7,8 +7,113 @@
     <title>Run Model</title>
     <link rel="stylesheet" href="style.css">
 
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
+
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&family=Ovo&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
+
+        /* Top-left logo */
+        .top-left-logo {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            width: 80px;
+            height: 80px;
+            z-index: 1500;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Auth Modal */
+        .auth-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .auth-container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 12px;
+            width: 350px;
+            text-align: center;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+        }
+
+        .auth-title {
+            font-family: 'Poppins', sans-serif;
+            font-weight: 600;
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .google-button {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: white;
+            color: #333;
+            padding: 12px 20px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: 'Poppins', sans-serif;
+            font-size: 16px;
+            margin: 15px auto;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            width: 80%;
+        }
+
+        .google-button:hover {
+            background-color: #f5f5f5;
+        }
+
+        .google-button img {
+            width: 20px;
+            height: 20px;
+            margin-right: 10px;
+        }
+
+        .user-info {
+            display: none;
+            position: fixed;
+            top: 10px;
+            right: 100px;
+            background-color: white;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            z-index: 1001;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        .user-info img {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            margin-right: 10px;
+            vertical-align: middle;
+        }
+
+        .logout-button {
+            margin-left: 10px;
+            background-color: #f44336;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 3px;
+            cursor: pointer;
+        }
 
         /* Assistant button styles */
         .assistant-button {
@@ -95,6 +200,8 @@
 </head>
 
 <body>
+    <!-- Top-left Logo -->
+    <img src="logo.png" alt="SpeakEase Logo" class="top-left-logo">
 
     <div class="main">
         <div class="nav-container">
@@ -103,7 +210,7 @@
                     <li> <a href="index.html">Home</a> </li>
                     <li> <a href="https://rvhieriger.vercel.app/">doubt</a> </li>
                     <li> <a href="https://texttoani.vercel.app/">Learn</a> </li>
-                    <li> <button class="login">SignUp</button> </li>
+                    <li> <button class="login" id="authButton">SignUp / Login</button> </li>
                 </ul>
             </nav>
         </div>
@@ -120,28 +227,6 @@
                 <h1>SPEAKEASE</h1>
                 <h3>Where signs find their voice</h3>
 
-<<<<<<< HEAD
-     <div class="container">
-
-        <div class="img1" >
-            <img  src = "mute.jpg" alt = "mute " width="350px" height="450px" >
-        </div>
-        <div class="img2" >
-            <img src="bubble.jpeg"   width="150px" alt="">
-        </div>
-
-        <div class="text"> 
-            <h1>SPEAKEASE</h1>
-            <h3>Where signs find their voice</h3>
-            
-            <p class="mm" >Camera-Based AI Hand Sign Language Detection to Text and Audio
-            Text to Animated Hand Sign Language Conversion
-            Learning Support for Video Calls and Doubt Resolution
-            AI Chatbot Support for Dictionary Assistance and Customer Service</p>
-        </div>
-     </div>
-    <button class="button1" onclick="runModel()">Interact</button>
-=======
                 <p class="mm">Camera-Based AI Hand Sign Language Detection to Text and Audio
                     Text to Animated Hand Sign Language Conversion
                     Learning Support for Video Calls and Doubt Resolution
@@ -149,11 +234,28 @@
             </div>
         </div>
         <button class="button1" onclick="runModel()">Interact</button>
->>>>>>> 5926b80cce8611636f0fbfd1b23c7f216fe3c638
         <p id="response"></p>
         <div class="line"></div>
         <div class="btn">
             <a href="https://texttoani.vercel.app/">Learn</a>
+        </div>
+    </div>
+
+    <!-- User Info Display -->
+    <div class="user-info" id="userInfo">
+        <img id="userPhoto" src="" alt="Profile">
+        <span id="userName"></span>
+        <button class="logout-button" id="logoutButton">Logout</button>
+    </div>
+
+    <!-- Auth Modal -->
+    <div class="auth-modal" id="authModal">
+        <div class="auth-container">
+            <div class="auth-title">Sign in to SpeakEase</div>
+            <button class="google-button" id="googleSignIn">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg" alt="Google">
+                Continue with Google
+            </button>
         </div>
     </div>
 
@@ -173,6 +275,79 @@
     </div>
 
     <script>
+        // Firebase Configuration - Replace with your actual config
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_AUTH_DOMAIN",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_STORAGE_BUCKET",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        
+        // Auth elements
+        const authButton = document.getElementById('authButton');
+        const authModal = document.getElementById('authModal');
+        const googleSignIn = document.getElementById('googleSignIn');
+        const userInfo = document.getElementById('userInfo');
+        const userPhoto = document.getElementById('userPhoto');
+        const userName = document.getElementById('userName');
+        const logoutButton = document.getElementById('logoutButton');
+
+        // Show auth modal
+        authButton.addEventListener('click', function() {
+            authModal.style.display = 'flex';
+        });
+
+        // Google Sign In
+        googleSignIn.addEventListener('click', function() {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            auth.signInWithPopup(provider)
+                .then((result) => {
+                    // Hide modal after successful sign-in
+                    authModal.style.display = 'none';
+                })
+                .catch((error) => {
+                    console.error("Error signing in with Google:", error);
+                });
+        });
+
+        // Logout
+        logoutButton.addEventListener('click', function() {
+            auth.signOut().then(() => {
+                userInfo.style.display = 'none';
+                authButton.textContent = 'SignUp / Login';
+            }).catch((error) => {
+                console.error("Error signing out:", error);
+            });
+        });
+
+        // Auth state changes
+        auth.onAuthStateChanged(function(user) {
+            if (user) {
+                // User is signed in
+                userPhoto.src = user.photoURL || 'default-avatar.png';
+                userName.textContent = user.displayName || user.email;
+                userInfo.style.display = 'block';
+                authButton.textContent = 'Signed In';
+            } else {
+                // User is signed out
+                userInfo.style.display = 'none';
+                authButton.textContent = 'SignUp / Login';
+            }
+        });
+
+        // Close modal when clicking outside
+        authModal.addEventListener('click', function(event) {
+            if (event.target === authModal) {
+                authModal.style.display = 'none';
+            }
+        });
+
         function runModel() {
             fetch('http://127.0.0.1:5000/run-model')
                 .then(response => response.json())
