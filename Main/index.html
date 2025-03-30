@@ -7,197 +7,112 @@
     <title>Run Model</title>
     <link rel="stylesheet" href="style.css">
 
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
+
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&family=Ovo&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        /* Top-left logo */
+        .top-left-logo {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            width: 80px;
+            height: 80px;
+            z-index: 1500;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
         }
 
-        body {
-            font-family: 'Poppins', sans-serif;
-            overflow-x: hidden;
-        }
-
-        .main {
-            width: 100%;
-            min-height: 100vh;
-            position: relative;
-            padding-bottom: 50px;
-        }
-
-        /* Navigation styles */
-        .nav-container {
-            width: 100%;
-            padding: 15px 20px;
-            background-color: #fff;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            position: sticky;
+        /* Auth Modal */
+        .auth-modal {
+            display: none;
+            position: fixed;
             top: 0;
-            z-index: 100;
-        }
-
-        .nav ul {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            list-style: none;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
-
-        .nav a {
-            text-decoration: none;
-            color: #333;
-            font-weight: 500;
-            transition: color 0.3s;
-            padding: 8px 15px;
-        }
-
-        .nav a:hover {
-            color: #4682B4;
-        }
-
-        .login {
-            background-color: #4682B4;
-            color: white;
-            border: none;
-            padding: 8px 20px;
-            border-radius: 20px;
-            cursor: pointer;
-            font-weight: 500;
-            transition: background-color 0.3s;
-        }
-
-        .login:hover {
-            background-color: #3a6d96;
-        }
-
-        /* Container for main content */
-        .container {
-            display: flex;
-            flex-wrap: wrap;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 2000;
             justify-content: center;
             align-items: center;
-            padding: 20px;
-            max-width: 1200px;
-            margin: 0 auto;
-            position: relative;
         }
 
-        /* Image styling */
-        .img1 {
-            flex: 0 0 100%;
-            max-width: 400px;
-            margin: 0 auto 20px;
+        .auth-container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 12px;
+            width: 350px;
             text-align: center;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
         }
 
-        .img1 img {
-            max-width: 100%;
-            height: auto;
-            border-radius: 10px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-        }
-
-        .img2 {
-            position: absolute;
-            width: 150px;
-            top: 50px;
-            right: 10%;
-            z-index: 10;
-            display: none;
-        }
-
-        .img2 img {
-            max-width: 100%;
-            height: auto;
-        }
-
-        /* Text content */
-        .text {
-            flex: 0 0 100%;
-            padding: 20px;
-            text-align: center;
-        }
-
-        .text h1 {
-            font-size: 2.5rem;
-            color: #4682B4;
-            margin-bottom: 10px;
-            font-family: 'Ovo', serif;
-        }
-
-        .text h3 {
-            font-size: 1.2rem;
-            color: #555;
+        .auth-title {
+            font-family: 'Poppins', sans-serif;
+            font-weight: 600;
+            font-size: 24px;
             margin-bottom: 20px;
-            font-weight: 400;
-            font-style: italic;
+            color: #333;
         }
 
-        .text .mm {
-            font-size: 1rem;
-            color: #666;
-            line-height: 1.6;
-            max-width: 700px;
-            margin: 0 auto;
+        .google-button {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: white;
+            color: #333;
+            padding: 12px 20px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: 'Poppins', sans-serif;
+            font-size: 16px;
+            margin: 15px auto;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            width: 80%;
         }
 
-        /* Button styling */
-        .button1 {
-            background-color: #4682B4;
+        .google-button:hover {
+            background-color: #f5f5f5;
+        }
+
+        .google-button img {
+            width: 20px;
+            height: 20px;
+            margin-right: 10px;
+        }
+
+        .user-info {
+            display: none;
+            position: fixed;
+            top: 10px;
+            right: 100px;
+            background-color: white;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            z-index: 1001;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        .user-info img {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            margin-right: 10px;
+            vertical-align: middle;
+        }
+
+        .logout-button {
+            margin-left: 10px;
+            background-color: #f44336;
             color: white;
             border: none;
-            padding: 12px 30px;
-            border-radius: 25px;
-            font-size: 1.1rem;
+            padding: 5px 10px;
+            border-radius: 3px;
             cursor: pointer;
-            margin: 30px auto;
-            display: block;
-            transition: transform 0.3s, background-color 0.3s;
-        }
-
-        .button1:hover {
-            background-color: #3a6d96;
-            transform: scale(1.05);
-        }
-
-        #response {
-            text-align: center;
-            margin: 20px 0;
-            color: #4682B4;
-            font-weight: 500;
-        }
-
-        .line {
-            width: 80%;
-            max-width: 800px;
-            height: 1px;
-            background-color: #ddd;
-            margin: 30px auto;
-        }
-
-        .btn {
-            text-align: center;
-            margin: 30px 0;
-        }
-
-        .btn a {
-            display: inline-block;
-            padding: 12px 30px;
-            background-color: #4682B4;
-            color: white;
-            text-decoration: none;
-            border-radius: 25px;
-            transition: transform 0.3s, background-color 0.3s;
-        }
-
-        .btn a:hover {
-            background-color: #3a6d96;
-            transform: scale(1.05);
         }
 
         /* Assistant button styles */
@@ -230,7 +145,7 @@
             position: fixed;
             bottom: 90px;
             right: 20px;
-            width: 90%;
+            width: 70%;
             max-width: 400px;
             height: 70vh;
             background-color: white;
@@ -239,9 +154,7 @@
             z-index: 999;
             overflow: hidden;
             display: none;
-            opacity: 0;
-            transform: translateY(20px);
-            transition: opacity 0.3s ease, transform 0.3s ease;
+            transition: all 0.3s ease;
         }
 
         .assistant-header {
@@ -283,120 +196,12 @@
             z-index: 998;
             display: none;
         }
-
-        /* Media Queries for Responsiveness */
-        @media screen and (min-width: 768px) {
-            .container {
-                flex-wrap: nowrap;
-                justify-content: space-between;
-            }
-
-            .img1 {
-                flex: 0 0 40%;
-                order: 1;
-                margin-bottom: 0;
-            }
-
-            .text {
-                flex: 0 0 55%;
-                order: 2;
-                text-align: left;
-                padding-left: 30px;
-            }
-
-            .img2 {
-                display: block;
-            }
-
-            .text h1 {
-                font-size: 3rem;
-            }
-
-            .text h3 {
-                font-size: 1.5rem;
-            }
-
-            .assistant-container {
-                width: 70%;
-            }
-        }
-
-        @media screen and (min-width: 992px) {
-            .img1 {
-                flex: 0 0 35%;
-            }
-
-            .text {
-                flex: 0 0 60%;
-            }
-
-            .img2 {
-                width: 200px;
-                top: 70px;
-                right: 15%;
-            }
-        }
-
-        @media screen and (max-width: 767px) {
-            .nav ul {
-                justify-content: center;
-            }
-
-            .text h1 {
-                font-size: 2rem;
-            }
-
-            .text h3 {
-                font-size: 1rem;
-            }
-
-            .text .mm {
-                font-size: 0.9rem;
-            }
-
-            .assistant-button {
-                width: 50px;
-                height: 50px;
-                font-size: 20px;
-            }
-        }
-
-        @media screen and (max-width: 480px) {
-            .nav-container {
-                padding: 10px;
-            }
-
-            .nav ul {
-                gap: 5px;
-            }
-
-            .nav a {
-                padding: 5px 10px;
-                font-size: 0.9rem;
-            }
-
-            .login {
-                padding: 5px 15px;
-                font-size: 0.9rem;
-            }
-
-            .text h1 {
-                font-size: 1.8rem;
-            }
-
-            .container {
-                padding: 10px;
-            }
-
-            .button1, .btn a {
-                padding: 10px 20px;
-                font-size: 1rem;
-            }
-        }
     </style>
 </head>
 
 <body>
+    <!-- Top-left Logo -->
+    <img src="logo.png" alt="SpeakEase Logo" class="top-left-logo">
 
     <div class="main">
         <div class="nav-container">
@@ -405,7 +210,7 @@
                     <li> <a href="index.html">Home</a> </li>
                     <li> <a href="https://rvhieriger.vercel.app/">doubt</a> </li>
                     <li> <a href="https://texttoani.vercel.app/">Learn</a> </li>
-                    <li> <button class="login">SignUp</button> </li>
+                    <li> <button class="login" id="authButton">SignUp / Login</button> </li>
                 </ul>
             </nav>
         </div>
@@ -436,6 +241,24 @@
         </div>
     </div>
 
+    <!-- User Info Display -->
+    <div class="user-info" id="userInfo">
+        <img id="userPhoto" src="" alt="Profile">
+        <span id="userName"></span>
+        <button class="logout-button" id="logoutButton">Logout</button>
+    </div>
+
+    <!-- Auth Modal -->
+    <div class="auth-modal" id="authModal">
+        <div class="auth-container">
+            <div class="auth-title">Sign in to SpeakEase</div>
+            <button class="google-button" id="googleSignIn">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg" alt="Google">
+                Continue with Google
+            </button>
+        </div>
+    </div>
+
     <!-- Assistant Button -->
     <button class="assistant-button" id="assistantButton">🤖</button>
 
@@ -452,6 +275,81 @@
     </div>
 
     <script>
+        // Firebase Configuration - Replace with your actual config
+        const firebaseConfig = {
+          apiKey: "AIzaSyDBph54Brl4-HJTRW5S0vJlZMM-nc-nkdg",
+  authDomain: "reboostify-f18db.firebaseapp.com",
+  databaseURL: "https://reboostify-f18db-default-rtdb.firebaseio.com",
+  projectId: "reboostify-f18db",
+  storageBucket: "reboostify-f18db.appspot.com",
+  messagingSenderId: "870800978453",
+  appId: "1:870800978453:web:cffcfca384b9d1de3f141c",
+  measurementId: "G-Z86QKJ0ND8"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        
+        // Auth elements
+        const authButton = document.getElementById('authButton');
+        const authModal = document.getElementById('authModal');
+        const googleSignIn = document.getElementById('googleSignIn');
+        const userInfo = document.getElementById('userInfo');
+        const userPhoto = document.getElementById('userPhoto');
+        const userName = document.getElementById('userName');
+        const logoutButton = document.getElementById('logoutButton');
+
+        // Show auth modal
+        authButton.addEventListener('click', function() {
+            authModal.style.display = 'flex';
+        });
+
+        // Google Sign In
+        googleSignIn.addEventListener('click', function() {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            auth.signInWithPopup(provider)
+                .then((result) => {
+                    // Hide modal after successful sign-in
+                    authModal.style.display = 'none';
+                })
+                .catch((error) => {
+                    console.error("Error signing in with Google:", error);
+                });
+        });
+
+        // Logout
+        logoutButton.addEventListener('click', function() {
+            auth.signOut().then(() => {
+                userInfo.style.display = 'none';
+                authButton.textContent = 'SignUp / Login';
+            }).catch((error) => {
+                console.error("Error signing out:", error);
+            });
+        });
+
+        // Auth state changes
+        auth.onAuthStateChanged(function(user) {
+            if (user) {
+                // User is signed in
+                userPhoto.src = user.photoURL || 'default-avatar.png';
+                userName.textContent = user.displayName || user.email;
+                userInfo.style.display = 'block';
+                authButton.textContent = 'Signed In';
+            } else {
+                // User is signed out
+                userInfo.style.display = 'none';
+                authButton.textContent = 'SignUp / Login';
+            }
+        });
+
+        // Close modal when clicking outside
+        authModal.addEventListener('click', function(event) {
+            if (event.target === authModal) {
+                authModal.style.display = 'none';
+            }
+        });
+
         function runModel() {
             fetch('http://127.0.0.1:5000/run-model')
                 .then(response => response.json())
