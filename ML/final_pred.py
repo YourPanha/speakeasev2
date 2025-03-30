@@ -37,8 +37,15 @@ class Application:
     def __init__(self):
         self.vs = cv2.VideoCapture(0)
         self.current_image = None
-        self.model = load_model(r"C:\Users\Rakesh\OneDrive\Desktop\Codes\AceHack\Sign-Language-To-Text-and-Speech-Conversion-master\cnn8grps_rad1_model.h5")
-        
+
+        # self.model = load_model(r"C:\Users\Rakesh\OneDrive\Desktop\Codes\AceHack\Sign-Language-To-Text-and-Speech-Conversion-master\cnn8grps_rad1_model.h5")
+
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        model_path = os.path.join(current_dir, "cnn8grps_rad1_model.h5")
+
+        # Load the model
+        self.model = load_model(model_path)
+
         self.speak_engine=pyttsx3.init()
         self.speak_engine.setProperty("rate",100)
         voices=self.speak_engine.getProperty("voices")
