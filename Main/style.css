@@ -1,5 +1,6 @@
 /* General body styling */
 body {
+    overflow: hidden;
     margin: 0;
     font-family: Arial, sans-serif;
     background-color: #f4f4f9;
@@ -60,12 +61,25 @@ background-color: white;
 
 .button1{
     position: relative;
-    left: 1000px;
-    top: 600px;
+    left: 1400px;
+    top: 100px;
+    padding: 12px;
+    font-size: medium;
+    font-weight: bold;
+    border-radius: 10px;
+    background-color: rgba(93, 106, 182, 0.808);
     
 }
 .img2{
     position: relative;
     left: 140px;
     top: 20px;
+}
+.line {
+    position: relative;
+    top: 350px;
+    width: 80%;
+    height: 2px;
+    background-color: black;
+    margin: 20px auto;
 }
