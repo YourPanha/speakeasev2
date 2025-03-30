@@ -1,5 +1,5 @@
 # Ace Hack 4.0 - Speakease 🚀  
-**Where Signs Find Their Voice** | *Team Infinite Bit*  
+**Where Signs Find Their Voice** | *Team Infinite Bit*  | **By First Year Students**
 
 ---
 
