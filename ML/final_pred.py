@@ -512,7 +512,7 @@ class Application:
             (self.pts[6][1] < self.pts[8][1] and self.pts[10][1] < self.pts[12][1] and self.pts[14][1] < self.pts[16][1] and
              self.pts[18][1] > self.pts[20][1])):
                 ch1 = 7
-
+    
         # con for [uvr]
         l = [[5, 5], [5, 0], [5, 4], [5, 1], [4, 6], [4, 1], [7, 6], [3, 0], [3, 5]]
         pl = [ch1, ch2]
