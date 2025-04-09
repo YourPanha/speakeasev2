@@ -73,11 +73,11 @@ class Application:
         self.root.configure(bg='black')  # Change background to black
 
         self.panel = tk.Label(self.root)
-        self.panel.place(x=100, y=3, width=480, height=640)
+        self.panel.place(x=100, y=3, width=480, height=640) #vid frame shift
         self.panel.config(bg='black')
 
         self.panel2 = tk.Label(self.root)  # initialize image panel
-        self.panel2.place(x=700, y=115, width=400, height=400)
+        self.panel2.place(x=700, y=115, width=400, height=400) #hand gesture shift
         self.panel2.config(bg='black')
 
         self.T = tk.Label(self.root)
