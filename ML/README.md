@@ -1,59 +1,82 @@
-# Sign Language to Text & Speech Conversion
+# Sign Language to Text and Speech Conversion
 
-## 📌 Introduction
-This project aims to bridge the communication gap for deaf and mute individuals by converting sign language gestures into text and speech using an AI-powered system.
+This project converts sign language gestures into text and speech output using computer vision and deep learning techniques.
 
-## 🚀 Features
-- Real-time sign language detection
-- Converts gestures into text and speech
-- Uses a CNN-based deep learning model
-- Works under different lighting conditions
-- User-friendly GUI using Tkinter
+## Features
+- Real-time sign language recognition
+- Support for both ASL (American Sign Language) and ISL (Indian Sign Language)
+- Text output of recognized signs
+- Speech synthesis of recognized signs
+- Web interface for easy interaction
+- Support for A-Z alphabet signs
 
-## 📂 Project Structure
+## Prerequisites
+- Python 3.8 or higher
+- Webcam
+- Required Python packages (listed in requirements.txt)
+
+## Installation
+
+1. Create a virtual environment (recommended):
+```bash
+python -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 ```
-├── final_pred.py          # Main script for sign detection
-├── requirements.txt       # List of dependencies
-├── app.py                 # GUI-based application
-├── test.py                # Script for model testing
-├── cnn8grps_rad1_model.h5 # Trained CNN model
-├── README.md              # Project documentation
-└── Sign_Language_Presentation.pptx  # Project presentation
+
+2. Install required packages:
+```bash
+pip install -r requirements.txt
 ```
 
-## 🛠 Installation
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/your-repo-link.git
-   cd sign-language-conversion
-   ```
-2. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-3. Run the application:
-   ```bash
-   python app.py
-   ```
+## Data Collection for ISL
 
-## 📊 Model Training
-- Dataset: Collected and preprocessed images of hand gestures
-- Model: Convolutional Neural Network (CNN)
-- Accuracy: 97% (tested in various environments)
+Before using the Indian Sign Language feature, you need to collect data for training:
 
-## 🔍 How It Works
-1. Webcam captures hand gestures
-2. Preprocessing using OpenCV & MediaPipe
-3. CNN model predicts the corresponding letter/word
-4. Text and speech output is generated
+1. Run the ISL data collection script:
+```bash
+python data_collection_isl.py
+```
 
-## 🏆 Future Enhancements
-- Support for Indian Sign Language (ISL)
-- Mobile app version
-- Integration with voice assistants
+2. Follow the on-screen instructions to collect hand sign data for each letter
+   - Press 'n' to move to the next letter
+   - Press 'a' to start/stop automatic capture
+   - Press 'c' to capture a single frame
+   - Press 'Esc' to exit
 
-## 🙌 Acknowledgments
-Thanks to the open-source community and researchers working on sign language recognition.
+3. Train the ISL model using the collected data:
+```bash
+python train_isl_model.py
+```
 
-## 📩 Contact
-For any queries or collaborations, reach out at: **your-email@example.com**
+## Usage
+
+4. Run the main application:
+```bash
+python final_pred.py
+```
+
+5. Use the interface to switch between ASL and ISL recognition modes
+
+## Key Features
+- Toggle between ASL and ISL recognition
+- Real-time hand tracking and gesture recognition
+- Text display of recognized signs
+- Speech output of recognized text
+- Word suggestions based on current input
+
+## Troubleshooting
+
+If you encounter issues with the webcam or model loading:
+1. Make sure your webcam is properly connected and accessible
+2. Check that all dependencies are correctly installed
+3. Verify that the model paths in the code match your actual file locations
+
+## License
+This project is provided as open-source software.
+
+## Acknowledgements
+- This project uses TensorFlow and OpenCV for machine learning and computer vision
+- Hand tracking implemented using the CVZone library
+- Text-to-speech conversion using pyttsx3
+
+

@@ -37,15 +37,17 @@ class Application:
     def __init__(self):
         self.vs = cv2.VideoCapture(0)
         self.current_image = None
-
-        # self.model = load_model(r"C:\Users\Rakesh\OneDrive\Desktop\Codes\AceHack\Sign-Language-To-Text-and-Speech-Conversion-master\cnn8grps_rad1_model.h5")
-
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        model_path = os.path.join(current_dir, "cnn8grps_rad1_model.h5")
-
-        # Load the model
-        self.model = load_model(model_path)
-
+        # Load ASL model
+        self.asl_model = load_model(r'C:\Users\batman\Downloads\Sign-Language-To-Text-and-Speech-Conversion-master\cnn8grps_rad1_model.h5')
+        # Path for ISL model - this should be replaced with the actual path when available
+        self.isl_model_path = r'C:\Users\batman\Downloads\Sign-Language-To-Text-and-Speech-Conversion-master\your_model.h5'
+        self.isl_model = load_model(self.isl_model_path) if os.path.exists(self.isl_model_path) else None
+        
+        # Current active model - default to ASL
+        self.current_model = self.asl_model
+        # Flag to track which language is currently active
+        self.is_asl_active = True
+        
         self.speak_engine=pyttsx3.init()
         self.speak_engine.setProperty("rate",100)
         voices=self.speak_engine.getProperty("voices")
@@ -73,11 +75,11 @@ class Application:
         self.root.configure(bg='black')  # Change background to black
 
         self.panel = tk.Label(self.root)
-        self.panel.place(x=100, y=3, width=480, height=640) #vid frame shift
+        self.panel.place(x=100, y=3, width=480, height=640)
         self.panel.config(bg='black')
 
         self.panel2 = tk.Label(self.root)  # initialize image panel
-        self.panel2.place(x=700, y=115, width=400, height=400) #hand gesture shift
+        self.panel2.place(x=700, y=115, width=400, height=400)
         self.panel2.config(bg='black')
 
         self.T = tk.Label(self.root)
@@ -125,6 +127,15 @@ class Application:
         self.clear.place(x=1205, y=630)
         self.clear.config(text="Clear", font=("Courier", 20), wraplength=100, command=self.clear_fun)
 
+        # Toggle button for ASL/ISL
+        self.toggle_language = tk.Button(self.root)
+        self.toggle_language.place(x=1105, y=630)
+        self.toggle_language.config(text="ASL", font=("Courier", 20), wraplength=100, command=self.toggle_language_fun, bg="green")
+
+        # Language indicator label
+        self.language_indicator = tk.Label(self.root)
+        self.language_indicator.place(x=1105, y=580)
+        self.language_indicator.config(text="Current: ASL", font=("Courier", 15), bg='black', fg='green')
 
         self.str = " "
         self.ccc=0
@@ -258,8 +269,12 @@ class Application:
 
 
     def speak_fun(self):
-        self.speak_engine.say(self.str)
-        self.speak_engine.runAndWait()
+        if len(self.str.strip()) > 0:
+            if self.is_asl_active:
+                self.speak_engine.say("In American Sign Language: " + self.str.strip())
+            else:
+                self.speak_engine.say("In Indian Sign Language: " + self.str.strip())
+            self.speak_engine.runAndWait()
 
 
     def clear_fun(self):
@@ -269,10 +284,39 @@ class Application:
         self.word3 = " "
         self.word4 = " "
 
+    def toggle_language_fun(self):
+        self.is_asl_active = not self.is_asl_active
+        
+        if self.is_asl_active:
+            self.current_model = self.asl_model
+            self.toggle_language.config(text="ASL", bg="green")
+            self.language_indicator.config(text="Current: ASL", fg="green")
+        else:
+            # Check if ISL model exists
+            if self.isl_model is None:
+                if os.path.exists(self.isl_model_path):
+                    self.isl_model = load_model(self.isl_model_path)
+                    self.current_model = self.isl_model
+                    self.toggle_language.config(text="ISL", bg="blue")
+                    self.language_indicator.config(text="Current: ISL", fg="blue")
+                else:
+                    # If ISL model doesn't exist, stay with ASL
+                    self.is_asl_active = True
+                    self.current_model = self.asl_model
+                    self.toggle_language.config(text="ASL", bg="green")
+                    self.language_indicator.config(text="Current: ASL (ISL model not found)", fg="red")
+            else:
+                self.current_model = self.isl_model
+                self.toggle_language.config(text="ISL", bg="blue")
+                self.language_indicator.config(text="Current: ISL", fg="blue")
+                
+        # Clear current text when switching languages
+        self.clear_fun()
+
     def predict(self, test_image):
         black = test_image
         black = black.reshape(1, 400, 400, 3)
-        prob = np.array(self.model.predict(black)[0], dtype='float32')
+        prob = np.array(self.current_model.predict(black)[0], dtype='float32')
         ch1 = np.argmax(prob, axis=0)
         prob[ch1] = 0
         ch2 = np.argmax(prob, axis=0)
@@ -281,386 +325,471 @@ class Application:
 
         pl = [ch1, ch2]
 
-        # condition for [Aemnst]
-        l = [[5, 2], [5, 3], [3, 5], [3, 6], [3, 0], [3, 2], [6, 4], [6, 1], [6, 2], [6, 6], [6, 7], [6, 0], [6, 5],
-             [4, 1], [1, 0], [1, 1], [6, 3], [1, 6], [5, 6], [5, 1], [4, 5], [1, 4], [1, 5], [2, 0], [2, 6], [4, 6],
-             [1, 0], [5, 7], [1, 6], [6, 1], [7, 6], [2, 5], [7, 1], [5, 4], [7, 0], [7, 5], [7, 2]]
-        if pl in l:
-            if (self.pts[6][1] < self.pts[8][1] and self.pts[10][1] < self.pts[12][1] and self.pts[14][1] < self.pts[16][1] and self.pts[18][1] < self.pts[20][1]):
-                ch1 = 0
+        # Use different prediction logic based on active language
+        if self.is_asl_active:
+            # ASL prediction logic
+            # condition for [Aemnst]
+            l = [[5, 2], [5, 3], [3, 5], [3, 6], [3, 0], [3, 2], [6, 4], [6, 1], [6, 2], [6, 6], [6, 7], [6, 0], [6, 5],
+                 [4, 1], [1, 0], [1, 1], [6, 3], [1, 6], [5, 6], [5, 1], [4, 5], [1, 4], [1, 5], [2, 0], [2, 6], [4, 6],
+                 [1, 0], [5, 7], [1, 6], [6, 1], [7, 6], [2, 5], [7, 1], [5, 4], [7, 0], [7, 5], [7, 2]]
+            if pl in l:
+                if (self.pts[6][1] < self.pts[8][1] and self.pts[10][1] < self.pts[12][1] and self.pts[14][1] < self.pts[16][1] and self.pts[18][1] < self.pts[20][1]):
+                    ch1 = 0
 
-        # condition for [o][s]
-        l = [[2, 2], [2, 1]]
-        if pl in l:
-            if (self.pts[5][0] < self.pts[4][0]):
-                ch1 = 0
+            # condition for [o][s]
+            l = [[2, 2], [2, 1]]
+            if pl in l:
+                if (self.pts[5][0] < self.pts[4][0]):
+                    ch1 = 0
 
-        # condition for [c0][aemnst]
-        l = [[0, 0], [0, 6], [0, 2], [0, 5], [0, 1], [0, 7], [5, 2], [7, 6], [7, 1]]
-        pl = [ch1, ch2]
-        if pl in l:
-            if (self.pts[0][0] > self.pts[8][0] and self.pts[0][0] > self.pts[4][0] and self.pts[0][0] > self.pts[12][0] and self.pts[0][0] > self.pts[16][0] and self.pts[0][0] > self.pts[20][0]) and self.pts[5][0] > self.pts[4][0]:
-                ch1 = 2
+            # condition for [c0][aemnst]
+            l = [[0, 0], [0, 6], [0, 2], [0, 5], [0, 1], [0, 7], [5, 2], [7, 6], [7, 1]]
+            pl = [ch1, ch2]
+            if pl in l:
+                if (self.pts[0][0] > self.pts[8][0] and self.pts[0][0] > self.pts[4][0] and self.pts[0][0] > self.pts[12][0] and self.pts[0][0] > self.pts[16][0] and self.pts[0][0] > self.pts[20][0]) and self.pts[5][0] > self.pts[4][0]:
+                    ch1 = 2
 
-        # condition for [c0][aemnst]
-        l = [[6, 0], [6, 6], [6, 2]]
-        pl = [ch1, ch2]
-        if pl in l:
-            if self.distance(self.pts[8], self.pts[16]) < 52:
-                ch1 = 2
+            # condition for [c0][aemnst]
+            l = [[6, 0], [6, 6], [6, 2]]
+            pl = [ch1, ch2]
+            if pl in l:
+                if self.distance(self.pts[8], self.pts[16]) < 52:
+                    ch1 = 2
 
-        # condition for [gh][bdfikruvw]
-        l = [[1, 4], [1, 5], [1, 6], [1, 3], [1, 0]]
-        pl = [ch1, ch2]
-        if pl in l:
-            if self.pts[6][1] > self.pts[8][1] and self.pts[14][1] < self.pts[16][1] and self.pts[18][1] < self.pts[20][1] and self.pts[0][0] < self.pts[8][0] and self.pts[0][0] < self.pts[12][0] and self.pts[0][0] < self.pts[16][0] and self.pts[0][0] < self.pts[20][0]:
-                ch1 = 3
+            # condition for [gh][bdfikruvw]
+            l = [[1, 4], [1, 5], [1, 6], [1, 3], [1, 0]]
+            pl = [ch1, ch2]
+            if pl in l:
+                if self.pts[6][1] > self.pts[8][1] and self.pts[14][1] < self.pts[16][1] and self.pts[18][1] < self.pts[20][1] and self.pts[0][0] < self.pts[8][0] and self.pts[0][0] < self.pts[12][0] and self.pts[0][0] < self.pts[16][0] and self.pts[0][0] < self.pts[20][0]:
+                    ch1 = 3
 
-        # con for [gh][l]
-        l = [[4, 6], [4, 1], [4, 5], [4, 3], [4, 7]]
-        pl = [ch1, ch2]
-        if pl in l:
-            if self.pts[4][0] > self.pts[0][0]:
-                ch1 = 3
+            # con for [gh][l]
+            l = [[4, 6], [4, 1], [4, 5], [4, 3], [4, 7]]
+            pl = [ch1, ch2]
+            if pl in l:
+                if self.pts[4][0] > self.pts[0][0]:
+                    ch1 = 3
 
-        # con for [gh][pqz]
-        l = [[5, 3], [5, 0], [5, 7], [5, 4], [5, 2], [5, 1], [5, 5]]
-        pl = [ch1, ch2]
-        if pl in l:
-            if self.pts[2][1] + 15 < self.pts[16][1]:
-                ch1 = 3
+            # con for [gh][pqz]
+            l = [[5, 3], [5, 0], [5, 7], [5, 4], [5, 2], [5, 1], [5, 5]]
+            pl = [ch1, ch2]
+            if pl in l:
+                if self.pts[2][1] + 15 < self.pts[16][1]:
+                    ch1 = 3
 
-        # con for [l][x]
-        l = [[6, 4], [6, 1], [6, 2]]
-        pl = [ch1, ch2]
-        if pl in l:
-            if self.distance(self.pts[4], self.pts[11]) > 55:
-                ch1 = 4
+            # con for [l][x]
+            l = [[6, 4], [6, 1], [6, 2]]
+            pl = [ch1, ch2]
+            if pl in l:
+                if self.distance(self.pts[4], self.pts[11]) > 55:
+                    ch1 = 4
 
-        # con for [l][d]
-        l = [[1, 4], [1, 6], [1, 1]]
-        pl = [ch1, ch2]
-        if pl in l:
-            if (self.distance(self.pts[4], self.pts[11]) > 50) and (self.pts[6][1] > self.pts[8][1] and self.pts[10][1] < self.pts[12][1] and self.pts[14][1] < self.pts[16][1] and self.pts[18][1] < self.pts[20][1]):
-                ch1 = 4
+            # con for [l][d]
+            l = [[1, 4], [1, 6], [1, 1]]
+            pl = [ch1, ch2]
+            if pl in l:
+                if (self.distance(self.pts[4], self.pts[11]) > 50) and (self.pts[6][1] > self.pts[8][1] and self.pts[10][1] < self.pts[12][1] and self.pts[14][1] < self.pts[16][1] and self.pts[18][1] < self.pts[20][1]):
+                    ch1 = 4
 
-        # con for [l][gh]
-        l = [[3, 6], [3, 4]]
-        pl = [ch1, ch2]
-        if pl in l:
-            if (self.pts[4][0] < self.pts[0][0]):
-                ch1 = 4
+            # con for [l][gh]
+            l = [[3, 6], [3, 4]]
+            pl = [ch1, ch2]
+            if pl in l:
+                if (self.pts[4][0] < self.pts[0][0]):
+                    ch1 = 4
 
-        # con for [l][c0]
-        l = [[2, 2], [2, 5], [2, 4]]
-        pl = [ch1, ch2]
-        if pl in l:
-            if (self.pts[1][0] < self.pts[12][0]):
-                ch1 = 4
+            # con for [l][c0]
+            l = [[2, 2], [2, 5], [2, 4]]
+            pl = [ch1, ch2]
+            if pl in l:
+                if (self.pts[1][0] < self.pts[12][0]):
+                    ch1 = 4
 
-        # con for [l][c0]
-        l = [[2, 2], [2, 5], [2, 4]]
-        pl = [ch1, ch2]
-        if pl in l:
-            if (self.pts[1][0] < self.pts[12][0]):
-                ch1 = 4
+            # con for [l][c0]
+            l = [[2, 2], [2, 5], [2, 4]]
+            pl = [ch1, ch2]
+            if pl in l:
+                if (self.pts[1][0] < self.pts[12][0]):
+                    ch1 = 4
 
-        # con for [gh][z]
-        l = [[3, 6], [3, 5], [3, 4]]
-        pl = [ch1, ch2]
-        if pl in l:
-            if (self.pts[6][1] > self.pts[8][1] and self.pts[10][1] < self.pts[12][1] and self.pts[14][1] < self.pts[16][1] and self.pts[18][1] < self.pts[20][1]) and self.pts[4][1] > self.pts[10][1]:
-                ch1 = 5
+            # con for [gh][z]
+            l = [[3, 6], [3, 5], [3, 4]]
+            pl = [ch1, ch2]
+            if pl in l:
+                if (self.pts[6][1] > self.pts[8][1] and self.pts[10][1] < self.pts[12][1] and self.pts[14][1] < self.pts[16][1] and self.pts[18][1] < self.pts[20][1]) and self.pts[4][1] > self.pts[10][1]:
+                    ch1 = 5
 
-        # con for [gh][pq]
-        l = [[3, 2], [3, 1], [3, 6]]
-        pl = [ch1, ch2]
-        if pl in l:
-            if self.pts[4][1] + 17 > self.pts[8][1] and self.pts[4][1] + 17 > self.pts[12][1] and self.pts[4][1] + 17 > self.pts[16][1] and self.pts[4][1] + 17 > self.pts[20][1]:
-                ch1 = 5
+            # con for [gh][pq]
+            l = [[3, 2], [3, 1], [3, 6]]
+            pl = [ch1, ch2]
+            if pl in l:
+                if self.pts[4][1] + 17 > self.pts[8][1] and self.pts[4][1] + 17 > self.pts[12][1] and self.pts[4][1] + 17 > self.pts[16][1] and self.pts[4][1] + 17 > self.pts[20][1]:
+                    ch1 = 5
 
-        # con for [l][pqz]
-        l = [[4, 4], [4, 5], [4, 2], [7, 5], [7, 6], [7, 0]]
-        pl = [ch1, ch2]
-        if pl in l:
-            if self.pts[4][0] > self.pts[0][0]:
-                ch1 = 5
+            # con for [l][pqz]
+            l = [[4, 4], [4, 5], [4, 2], [7, 5], [7, 6], [7, 0]]
+            pl = [ch1, ch2]
+            if pl in l:
+                if self.pts[4][0] > self.pts[0][0]:
+                    ch1 = 5
 
-        # con for [pqz][aemnst]
-        l = [[0, 2], [0, 6], [0, 1], [0, 5], [0, 0], [0, 7], [0, 4], [0, 3], [2, 7]]
-        pl = [ch1, ch2]
-        if pl in l:
-            if self.pts[0][0] < self.pts[8][0] and self.pts[0][0] < self.pts[12][0] and self.pts[0][0] < self.pts[16][0] and self.pts[0][0] < self.pts[20][0]:
-                ch1 = 5
+            # con for [pqz][aemnst]
+            l = [[0, 2], [0, 6], [0, 1], [0, 5], [0, 0], [0, 7], [0, 4], [0, 3], [2, 7]]
+            pl = [ch1, ch2]
+            if pl in l:
+                if self.pts[0][0] < self.pts[8][0] and self.pts[0][0] < self.pts[12][0] and self.pts[0][0] < self.pts[16][0] and self.pts[0][0] < self.pts[20][0]:
+                    ch1 = 5
 
-        # con for [pqz][yj]
-        l = [[5, 7], [5, 2], [5, 6]]
-        pl = [ch1, ch2]
-        if pl in l:
-            if self.pts[3][0] < self.pts[0][0]:
-                ch1 = 7
+            # con for [pqz][yj]
+            l = [[5, 7], [5, 2], [5, 6]]
+            pl = [ch1, ch2]
+            if pl in l:
+                if self.pts[3][0] < self.pts[0][0]:
+                    ch1 = 7
 
-        # con for [l][yj]
-        l = [[4, 6], [4, 2], [4, 4], [4, 1], [4, 5], [4, 7]]
-        pl = [ch1, ch2]
-        if pl in l:
-            if self.pts[6][1] < self.pts[8][1]:
-                ch1 = 7
+            # con for [l][yj]
+            l = [[4, 6], [4, 2], [4, 4], [4, 1], [4, 5], [4, 7]]
+            pl = [ch1, ch2]
+            if pl in l:
+                if self.pts[6][1] < self.pts[8][1]:
+                    ch1 = 7
 
-        # con for [x][yj]
-        l = [[6, 7], [0, 7], [0, 1], [0, 0], [6, 4], [6, 6], [6, 5], [6, 1]]
-        pl = [ch1, ch2]
-        if pl in l:
-            if self.pts[18][1] > self.pts[20][1]:
-                ch1 = 7
+            # con for [x][yj]
+            l = [[6, 7], [0, 7], [0, 1], [0, 0], [6, 4], [6, 6], [6, 5], [6, 1]]
+            pl = [ch1, ch2]
+            if pl in l:
+                if self.pts[18][1] > self.pts[20][1]:
+                    ch1 = 7
 
-        # condition for [x][aemnst]
-        l = [[0, 4], [0, 2], [0, 3], [0, 1], [0, 6]]
-        pl = [ch1, ch2]
-        if pl in l:
-            if self.pts[5][0] > self.pts[16][0]:
-                ch1 = 6
+            # condition for [x][aemnst]
+            l = [[0, 4], [0, 2], [0, 3], [0, 1], [0, 6]]
+            pl = [ch1, ch2]
+            if pl in l:
+                if self.pts[5][0] > self.pts[16][0]:
+                    ch1 = 6
 
-        # condition for [yj][x]
-        l = [[7, 2]]
-        pl = [ch1, ch2]
-        if pl in l:
-            if self.pts[18][1] < self.pts[20][1] and self.pts[8][1] < self.pts[10][1]:
-                ch1 = 6
+            # condition for [yj][x]
+            l = [[7, 2]]
+            pl = [ch1, ch2]
+            if pl in l:
+                if self.pts[18][1] < self.pts[20][1] and self.pts[8][1] < self.pts[10][1]:
+                    ch1 = 6
 
-        # condition for [c0][x]
-        l = [[2, 1], [2, 2], [2, 6], [2, 7], [2, 0]]
-        pl = [ch1, ch2]
-        if pl in l:
-            if self.distance(self.pts[8], self.pts[16]) > 50:
-                ch1 = 6
+            # condition for [c0][x]
+            l = [[2, 1], [2, 2], [2, 6], [2, 7], [2, 0]]
+            pl = [ch1, ch2]
+            if pl in l:
+                if self.distance(self.pts[8], self.pts[16]) > 50:
+                    ch1 = 6
 
-        # con for [l][x]
-        l = [[4, 6], [4, 2], [4, 1], [4, 4]]
-        pl = [ch1, ch2]
-        if pl in l:
-            if self.distance(self.pts[4], self.pts[11]) < 60:
-                ch1 = 6
+            # con for [l][x]
+            l = [[4, 6], [4, 2], [4, 1], [4, 4]]
+            pl = [ch1, ch2]
+            if pl in l:
+                if self.distance(self.pts[4], self.pts[11]) < 60:
+                    ch1 = 6
 
-        # con for [x][d]
-        l = [[1, 4], [1, 6], [1, 0], [1, 2]]
-        pl = [ch1, ch2]
-        if pl in l:
-            if self.pts[5][0] - self.pts[4][0] - 15 > 0:
-                ch1 = 6
+            # con for [x][d]
+            l = [[1, 4], [1, 6], [1, 0], [1, 2]]
+            pl = [ch1, ch2]
+            if pl in l:
+                if self.pts[5][0] - self.pts[4][0] - 15 > 0:
+                    ch1 = 6
 
-        # con for [b][pqz]
-        l = [[5, 0], [5, 1], [5, 4], [5, 5], [5, 6], [6, 1], [7, 6], [0, 2], [7, 1], [7, 4], [6, 6], [7, 2], [5, 0],
-             [6, 3], [6, 4], [7, 5], [7, 2]]
-        pl = [ch1, ch2]
-        if pl in l:
-            if (self.pts[6][1] > self.pts[8][1] and self.pts[10][1] > self.pts[12][1] and self.pts[14][1] > self.pts[16][1] and self.pts[18][1] > self.pts[20][1]):
-                ch1 = 1
+            # con for [b][pqz]
+            l = [[5, 0], [5, 1], [5, 4], [5, 5], [5, 6], [6, 1], [7, 6], [0, 2], [7, 1], [7, 4], [6, 6], [7, 2], [5, 0],
+                 [6, 3], [6, 4], [7, 5], [7, 2]]
+            pl = [ch1, ch2]
+            if pl in l:
+                if (self.pts[6][1] > self.pts[8][1] and self.pts[10][1] > self.pts[12][1] and self.pts[14][1] > self.pts[16][1] and self.pts[18][1] > self.pts[20][1]):
+                    ch1 = 1
 
-        # con for [f][pqz]
-        l = [[6, 1], [6, 0], [0, 3], [6, 4], [2, 2], [0, 6], [6, 2], [7, 6], [4, 6], [4, 1], [4, 2], [0, 2], [7, 1],
-             [7, 4], [6, 6], [7, 2], [7, 5], [7, 2]]
-        pl = [ch1, ch2]
-        if pl in l:
-            if (self.pts[6][1] < self.pts[8][1] and self.pts[10][1] > self.pts[12][1] and self.pts[14][1] > self.pts[16][1] and self.pts[18][1] > self.pts[20][1]):
-                ch1 = 1
+            # con for [f][pqz]
+            l = [[6, 1], [6, 0], [0, 3], [6, 4], [2, 2], [0, 6], [6, 2], [7, 6], [4, 6], [4, 1], [4, 2], [0, 2], [7, 1],
+                 [7, 4], [6, 6], [7, 2], [7, 5], [7, 2]]
+            pl = [ch1, ch2]
+            if pl in l:
+                if (self.pts[6][1] < self.pts[8][1] and self.pts[10][1] > self.pts[12][1] and self.pts[14][1] > self.pts[16][1] and self.pts[18][1] > self.pts[20][1]):
+                    ch1 = 1
 
-        l = [[6, 1], [6, 0], [4, 2], [4, 1], [4, 6], [4, 4]]
-        pl = [ch1, ch2]
-        if pl in l:
-            if (self.pts[10][1] > self.pts[12][1] and self.pts[14][1] > self.pts[16][1] and self.pts[18][1] > self.pts[20][1]):
-                ch1 = 1
+            l = [[6, 1], [6, 0], [4, 2], [4, 1], [4, 6], [4, 4]]
+            pl = [ch1, ch2]
+            if pl in l:
+                if (self.pts[10][1] > self.pts[12][1] and self.pts[14][1] > self.pts[16][1] and self.pts[18][1] > self.pts[20][1]):
+                    ch1 = 1
 
-        # con for [d][pqz]
-        fg = 19
-        l = [[5, 0], [3, 4], [3, 0], [3, 1], [3, 5], [5, 5], [5, 4], [5, 1], [7, 6]]
-        pl = [ch1, ch2]
-        if pl in l:
-            if ((self.pts[6][1] > self.pts[8][1] and self.pts[10][1] < self.pts[12][1] and self.pts[14][1] < self.pts[16][1] and self.pts[18][1] < self.pts[20][1]) and (self.pts[2][0] < self.pts[0][0]) and self.pts[4][1] > self.pts[14][1]):
-                ch1 = 1
+            # con for [d][pqz]
+            fg = 19
+            l = [[5, 0], [3, 4], [3, 0], [3, 1], [3, 5], [5, 5], [5, 4], [5, 1], [7, 6]]
+            pl = [ch1, ch2]
+            if pl in l:
+                if ((self.pts[6][1] > self.pts[8][1] and self.pts[10][1] < self.pts[12][1] and self.pts[14][1] < self.pts[16][1] and self.pts[18][1] < self.pts[20][1]) and (self.pts[2][0] < self.pts[0][0]) and self.pts[4][1] > self.pts[14][1]):
+                    ch1 = 1
 
-        l = [[4, 1], [4, 2], [4, 4]]
-        pl = [ch1, ch2]
-        if pl in l:
-            if (self.distance(self.pts[4], self.pts[11]) < 50) and (self.pts[6][1] > self.pts[8][1] and self.pts[10][1] < self.pts[12][1] and self.pts[14][1] < self.pts[16][1] and self.pts[18][1] < self.pts[20][1]):
-                ch1 = 1
+            l = [[4, 1], [4, 2], [4, 4]]
+            pl = [ch1, ch2]
+            if pl in l:
+                if (self.distance(self.pts[4], self.pts[11]) < 50) and (self.pts[6][1] > self.pts[8][1] and self.pts[10][1] < self.pts[12][1] and self.pts[14][1] < self.pts[16][1] and self.pts[18][1] < self.pts[20][1]):
+                    ch1 = 1
 
-        l = [[3, 4], [3, 0], [3, 1], [3, 5], [3, 6]]
-        pl = [ch1, ch2]
-        if pl in l:
-            if ((self.pts[6][1] > self.pts[8][1] and self.pts[10][1] < self.pts[12][1] and self.pts[14][1] < self.pts[16][1] and self.pts[18][1] < self.pts[20][1]) and (self.pts[2][0] < self.pts[0][0]) and self.pts[14][1] < self.pts[4][1]):
-                ch1 = 1
+            l = [[3, 4], [3, 0], [3, 1], [3, 5], [3, 6]]
+            pl = [ch1, ch2]
+            if pl in l:
+                if ((self.pts[6][1] > self.pts[8][1] and self.pts[10][1] < self.pts[12][1] and self.pts[14][1] < self.pts[16][1] and self.pts[18][1] < self.pts[20][1]) and (self.pts[2][0] < self.pts[0][0]) and self.pts[14][1] < self.pts[4][1]):
+                    ch1 = 1
 
-        l = [[6, 6], [6, 4], [6, 1], [6, 2]]
-        pl = [ch1, ch2]
-        if pl in l:
-            if self.pts[5][0] - self.pts[4][0] - 15 < 0:
-                ch1 = 1
+            l = [[6, 6], [6, 4], [6, 1], [6, 2]]
+            pl = [ch1, ch2]
+            if pl in l:
+                if self.pts[5][0] - self.pts[4][0] - 15 < 0:
+                    ch1 = 1
 
-        # con for [i][pqz]
-        l = [[5, 4], [5, 5], [5, 1], [0, 3], [0, 7], [5, 0], [0, 2], [6, 2], [7, 5], [7, 1], [7, 6], [7, 7]]
-        pl = [ch1, ch2]
-        if pl in l:
-            if ((self.pts[6][1] < self.pts[8][1] and self.pts[10][1] < self.pts[12][1] and self.pts[14][1] < self.pts[16][1] and self.pts[18][1] > self.pts[20][1])):
-                ch1 = 1
+            # con for [i][pqz]
+            l = [[5, 4], [5, 5], [5, 1], [0, 3], [0, 7], [5, 0], [0, 2], [6, 2], [7, 5], [7, 1], [7, 6], [7, 7]]
+            pl = [ch1, ch2]
+            if pl in l:
+                if ((self.pts[6][1] < self.pts[8][1] and self.pts[10][1] < self.pts[12][1] and self.pts[14][1] < self.pts[16][1] and self.pts[18][1] > self.pts[20][1])):
+                    ch1 = 1
 
-        # con for [yj][bfdi]
-        l = [[1, 5], [1, 7], [1, 1], [1, 6], [1, 3], [1, 0]]
-        pl = [ch1, ch2]
-        if pl in l:
-            if (self.pts[4][0] < self.pts[5][0] + 15) and (
-            (self.pts[6][1] < self.pts[8][1] and self.pts[10][1] < self.pts[12][1] and self.pts[14][1] < self.pts[16][1] and
-             self.pts[18][1] > self.pts[20][1])):
-                ch1 = 7
-    
-        # con for [uvr]
-        l = [[5, 5], [5, 0], [5, 4], [5, 1], [4, 6], [4, 1], [7, 6], [3, 0], [3, 5]]
-        pl = [ch1, ch2]
-        if pl in l:
-            if ((self.pts[6][1] > self.pts[8][1] and self.pts[10][1] > self.pts[12][1] and self.pts[14][1] < self.pts[16][1] and
-                 self.pts[18][1] < self.pts[20][1])) and self.pts[4][1] > self.pts[14][1]:
-                ch1 = 1
+            # con for [yj][bfdi]
+            l = [[1, 5], [1, 7], [1, 1], [1, 6], [1, 3], [1, 0]]
+            pl = [ch1, ch2]
+            if pl in l:
+                if (self.pts[4][0] < self.pts[5][0] + 15) and (
+                (self.pts[6][1] < self.pts[8][1] and self.pts[10][1] < self.pts[12][1] and self.pts[14][1] < self.pts[16][1] and
+                 self.pts[18][1] > self.pts[20][1])):
+                    ch1 = 7
 
-        # con for [w]
-        fg = 13
-        l = [[3, 5], [3, 0], [3, 6], [5, 1], [4, 1], [2, 0], [5, 0], [5, 5]]
-        pl = [ch1, ch2]
-        if pl in l:
-            if not (self.pts[0][0] + fg < self.pts[8][0] and self.pts[0][0] + fg < self.pts[12][0] and self.pts[0][0] + fg < self.pts[16][0] and
-                    self.pts[0][0] + fg < self.pts[20][0]) and not (
-                    self.pts[0][0] > self.pts[8][0] and self.pts[0][0] > self.pts[12][0] and self.pts[0][0] > self.pts[16][0] and self.pts[0][0] > self.pts[20][
-                0]) and self.distance(self.pts[4], self.pts[11]) < 50:
-                ch1 = 1
+            # con for [uvr]
+            l = [[5, 5], [5, 0], [5, 4], [5, 1], [4, 6], [4, 1], [7, 6], [3, 0], [3, 5]]
+            pl = [ch1, ch2]
+            if pl in l:
+                if ((self.pts[6][1] > self.pts[8][1] and self.pts[10][1] > self.pts[12][1] and self.pts[14][1] < self.pts[16][1] and
+                     self.pts[18][1] < self.pts[20][1])) and self.pts[4][1] > self.pts[14][1]:
+                    ch1 = 1
 
-        # con for [w]
+            # con for [w]
+            fg = 13
+            l = [[3, 5], [3, 0], [3, 6], [5, 1], [4, 1], [2, 0], [5, 0], [5, 5]]
+            pl = [ch1, ch2]
+            if pl in l:
+                if not (self.pts[0][0] + fg < self.pts[8][0] and self.pts[0][0] + fg < self.pts[12][0] and self.pts[0][0] + fg < self.pts[16][0] and
+                        self.pts[0][0] + fg < self.pts[20][0]) and not (
+                        self.pts[0][0] > self.pts[8][0] and self.pts[0][0] > self.pts[12][0] and self.pts[0][0] > self.pts[16][0] and self.pts[0][0] > self.pts[20][
+                    0]) and self.distance(self.pts[4], self.pts[11]) < 50:
+                    ch1 = 1
 
-        l = [[5, 0], [5, 5], [0, 1]]
-        pl = [ch1, ch2]
-        if pl in l:
-            if self.pts[6][1] > self.pts[8][1] and self.pts[10][1] > self.pts[12][1] and self.pts[14][1] > self.pts[16][1]:
-                ch1 = 1
+            # con for [w]
 
-        # -------------------------condn for 8 groups  ends
+            l = [[5, 0], [5, 5], [0, 1]]
+            pl = [ch1, ch2]
+            if pl in l:
+                if self.pts[6][1] > self.pts[8][1] and self.pts[10][1] > self.pts[12][1] and self.pts[14][1] > self.pts[16][1]:
+                    ch1 = 1
 
-        # -------------------------condn for subgroups  starts
-        #
-        if ch1 == 0:
-            ch1 = 'S'
-            if self.pts[4][0] < self.pts[6][0] and self.pts[4][0] < self.pts[10][0] and self.pts[4][0] < self.pts[14][0] and self.pts[4][0] < self.pts[18][0]:
-                ch1 = 'A'
-            if self.pts[4][0] > self.pts[6][0] and self.pts[4][0] < self.pts[10][0] and self.pts[4][0] < self.pts[14][0] and self.pts[4][0] < self.pts[18][
-                0] and self.pts[4][1] < self.pts[14][1] and self.pts[4][1] < self.pts[18][1]:
-                ch1 = 'T'
-            if self.pts[4][1] > self.pts[8][1] and self.pts[4][1] > self.pts[12][1] and self.pts[4][1] > self.pts[16][1] and self.pts[4][1] > self.pts[20][1]:
-                ch1 = 'E'
-            if self.pts[4][0] > self.pts[6][0] and self.pts[4][0] > self.pts[10][0] and self.pts[4][0] > self.pts[14][0] and self.pts[4][1] < self.pts[18][1]:
-                ch1 = 'M'
-            if self.pts[4][0] > self.pts[6][0] and self.pts[4][0] > self.pts[10][0] and self.pts[4][1] < self.pts[18][1] and self.pts[4][1] < self.pts[14][1]:
-                ch1 = 'N'
+            # -------------------------condn for 8 groups  ends
 
-        if ch1 == 2:
-            if self.distance(self.pts[12], self.pts[4]) > 42:
+            # -------------------------condn for subgroups  starts
+            #
+            if ch1 == 0:
+                ch1 = 'S'
+                if self.pts[4][0] < self.pts[6][0] and self.pts[4][0] < self.pts[10][0] and self.pts[4][0] < self.pts[14][0] and self.pts[4][0] < self.pts[18][0]:
+                    ch1 = 'A'
+                if self.pts[4][0] > self.pts[6][0] and self.pts[4][0] < self.pts[10][0] and self.pts[4][0] < self.pts[14][0] and self.pts[4][0] < self.pts[18][
+                    0] and self.pts[4][1] < self.pts[14][1] and self.pts[4][1] < self.pts[18][1]:
+                    ch1 = 'T'
+                if self.pts[4][1] > self.pts[8][1] and self.pts[4][1] > self.pts[12][1] and self.pts[4][1] > self.pts[16][1] and self.pts[4][1] > self.pts[20][1]:
+                    ch1 = 'E'
+                if self.pts[4][0] > self.pts[6][0] and self.pts[4][0] > self.pts[10][0] and self.pts[4][0] > self.pts[14][0] and self.pts[4][1] < self.pts[18][1]:
+                    ch1 = 'M'
+                if self.pts[4][0] > self.pts[6][0] and self.pts[4][0] > self.pts[10][0] and self.pts[4][1] < self.pts[18][1] and self.pts[4][1] < self.pts[14][1]:
+                    ch1 = 'N'
+
+            if ch1 == 2:
+                if self.distance(self.pts[12], self.pts[4]) > 42:
+                    ch1 = 'C'
+                else:
+                    ch1 = 'O'
+
+            if ch1 == 3:
+                if (self.distance(self.pts[8], self.pts[12])) > 72:
+                    ch1 = 'G'
+                else:
+                    ch1 = 'H'
+
+            if ch1 == 7:
+                if self.distance(self.pts[8], self.pts[4]) > 42:
+                    ch1 = 'Y'
+                else:
+                    ch1 = 'J'
+
+            if ch1 == 4:
+                ch1 = 'L'
+
+            if ch1 == 6:
+                ch1 = 'X'
+
+            if ch1 == 5:
+                if self.pts[4][0] > self.pts[12][0] and self.pts[4][0] > self.pts[16][0] and self.pts[4][0] > self.pts[20][0]:
+                    if self.pts[8][1] < self.pts[5][1]:
+                        ch1 = 'Z'
+                    else:
+                        ch1 = 'Q'
+                else:
+                    ch1 = 'P'
+
+            if ch1 == 1:
+                if (self.pts[6][1] > self.pts[8][1] and self.pts[10][1] > self.pts[12][1] and self.pts[14][1] > self.pts[16][1] and self.pts[18][1] > self.pts[20][
+                    1]):
+                    ch1 = 'B'
+                if (self.pts[6][1] > self.pts[8][1] and self.pts[10][1] < self.pts[12][1] and self.pts[14][1] < self.pts[16][1] and self.pts[18][1] < self.pts[20][
+                    1]):
+                    ch1 = 'D'
+                if (self.pts[6][1] < self.pts[8][1] and self.pts[10][1] > self.pts[12][1] and self.pts[14][1] > self.pts[16][1] and self.pts[18][1] > self.pts[20][
+                    1]):
+                    ch1 = 'F'
+                if (self.pts[6][1] < self.pts[8][1] and self.pts[10][1] < self.pts[12][1] and self.pts[14][1] < self.pts[16][1] and self.pts[18][1] > self.pts[20][
+                    1]):
+                    ch1 = 'I'
+                if (self.pts[6][1] > self.pts[8][1] and self.pts[10][1] > self.pts[12][1] and self.pts[14][1] > self.pts[16][1] and self.pts[18][1] < self.pts[20][
+                    1]):
+                    ch1 = 'W'
+                if (self.pts[6][1] > self.pts[8][1] and self.pts[10][1] > self.pts[12][1] and self.pts[14][1] < self.pts[16][1] and self.pts[18][1] < self.pts[20][
+                    1]) and self.pts[4][1] < self.pts[9][1]:
+                    ch1 = 'K'
+                if ((self.distance(self.pts[8], self.pts[12]) - self.distance(self.pts[6], self.pts[10])) < 8) and (
+                        self.pts[6][1] > self.pts[8][1] and self.pts[10][1] > self.pts[12][1] and self.pts[14][1] < self.pts[16][1] and self.pts[18][1] <
+                        self.pts[20][1]):
+                    ch1 = 'U'
+                if ((self.distance(self.pts[8], self.pts[12]) - self.distance(self.pts[6], self.pts[10])) >= 8) and (
+                        self.pts[6][1] > self.pts[8][1] and self.pts[10][1] > self.pts[12][1] and self.pts[14][1] < self.pts[16][1] and self.pts[18][1] <
+                        self.pts[20][1]) and (self.pts[4][1] > self.pts[9][1]):
+                    ch1 = 'V'
+
+                if (self.pts[8][0] > self.pts[12][0]) and (
+                        self.pts[6][1] > self.pts[8][1] and self.pts[10][1] > self.pts[12][1] and self.pts[14][1] < self.pts[16][1] and self.pts[18][1] <
+                        self.pts[20][1]):
+                    ch1 = 'R'
+
+            if ch1 == 1 or ch1 =='E' or ch1 =='S' or ch1 =='X' or ch1 =='Y' or ch1 =='B':
+                if (self.pts[6][1] > self.pts[8][1] and self.pts[10][1] < self.pts[12][1] and self.pts[14][1] < self.pts[16][1] and self.pts[18][1] > self.pts[20][1]):
+                    ch1=" "
+
+
+
+            print(self.pts[4][0] < self.pts[5][0])
+            if ch1 == 'E' or ch1=='Y' or ch1=='B':
+                if (self.pts[4][0] < self.pts[5][0]) and (self.pts[6][1] > self.pts[8][1] and self.pts[10][1] > self.pts[12][1] and self.pts[14][1] > self.pts[16][1] and self.pts[18][1] > self.pts[20][1]):
+                    ch1="next"
+
+
+            if ch1 == 'Next' or ch1 == 'B' or ch1 == 'C' or ch1 == 'H' or ch1 == 'F' or ch1 == 'X':
+                if (self.pts[0][0] > self.pts[8][0] and self.pts[0][0] > self.pts[12][0] and self.pts[0][0] > self.pts[16][0] and self.pts[0][0] > self.pts[20][0]) and (self.pts[4][1] < self.pts[8][1] and self.pts[4][1] < self.pts[12][1] and self.pts[4][1] < self.pts[16][1] and self.pts[4][1] < self.pts[20][1]) and (self.pts[4][1] < self.pts[6][1] and self.pts[4][1] < self.pts[10][1] and self.pts[4][1] < self.pts[14][1] and self.pts[4][1] < self.pts[18][1]):
+                    ch1 = 'Backspace'
+
+
+            if ch1=="next" and self.prev_char!="next":
+                if self.ten_prev_char[(self.count-2)%10]!="next":
+                    if self.ten_prev_char[(self.count-2)%10]=="Backspace":
+                        self.str=self.str[0:-1]
+                    else:
+                        if self.ten_prev_char[(self.count - 2) % 10] != "Backspace":
+                            self.str = self.str + self.ten_prev_char[(self.count-2)%10]
+                else:
+                    if self.ten_prev_char[(self.count - 0) % 10] != "Backspace":
+                        self.str = self.str + self.ten_prev_char[(self.count - 0) % 10]
+
+
+            if ch1=="  " and self.prev_char!="  ":
+                self.str = self.str + "  "
+
+            self.prev_char=ch1
+            self.current_symbol=ch1
+            self.count += 1
+            self.ten_prev_char[self.count%10]=ch1
+
+
+            if len(self.str.strip())!=0:
+                st=self.str.rfind(" ")
+                ed=len(self.str)
+                word=self.str[st+1:ed]
+                self.word=word
+                if len(word.strip())!=0:
+                    ddd.check(word)
+                    lenn = len(ddd.suggest(word))
+                    if lenn >= 4:
+                        self.word4 = ddd.suggest(word)[3]
+
+                    if lenn >= 3:
+                        self.word3 = ddd.suggest(word)[2]
+
+                    if lenn >= 2:
+                        self.word2 = ddd.suggest(word)[1]
+
+                    if lenn >= 1:
+                        self.word1 = ddd.suggest(word)[0]
+                else:
+                    self.word1 = " "
+                    self.word2 = " "
+                    self.word3 = " "
+                    self.word4 = " "
+
+        else:
+            # ISL prediction logic - this should be customized based on ISL dataset
+            # For now, we use the same logic as ASL but would need to be updated with specific ISL hand detection rules
+            # This is a placeholder until a proper ISL model and detection logic is implemented
+            l = [[5, 2], [5, 3], [3, 5], [3, 6], [3, 0], [3, 2], [6, 4], [6, 1], [6, 2], [6, 6], [6, 7], [6, 0], [6, 5],
+                 [4, 1], [1, 0], [1, 1], [6, 3], [1, 6], [5, 6], [5, 1], [4, 5], [1, 4], [1, 5], [2, 0], [2, 6], [4, 6],
+                 [1, 0], [5, 7], [1, 6], [6, 1], [7, 6], [2, 5], [7, 1], [5, 4], [7, 0], [7, 5], [7, 2]]
+            if pl in l:
+                if (self.pts[6][1] < self.pts[8][1] and self.pts[10][1] < self.pts[12][1] and self.pts[14][1] < self.pts[16][1] and self.pts[18][1] < self.pts[20][1]):
+                    ch1 = 0
+
+        # Final character output
+        if self.is_asl_active:
+            # ASL output conversion
+            if ch1 == 0:
+                ch1 = 'S'
+            if ch1 == 2:
                 ch1 = 'C'
-            else:
-                ch1 = 'O'
-
-        if ch1 == 3:
-            if (self.distance(self.pts[8], self.pts[12])) > 72:
+            if ch1 == 3:
                 ch1 = 'G'
-            else:
-                ch1 = 'H'
-
-        if ch1 == 7:
-            if self.distance(self.pts[8], self.pts[4]) > 42:
+            if ch1 == 7:
                 ch1 = 'Y'
-            else:
-                ch1 = 'J'
-
-        if ch1 == 4:
-            ch1 = 'L'
-
-        if ch1 == 6:
-            ch1 = 'X'
-
-        if ch1 == 5:
-            if self.pts[4][0] > self.pts[12][0] and self.pts[4][0] > self.pts[16][0] and self.pts[4][0] > self.pts[20][0]:
-                if self.pts[8][1] < self.pts[5][1]:
-                    ch1 = 'Z'
-                else:
-                    ch1 = 'Q'
-            else:
+            if ch1 == 4:
+                ch1 = 'L'
+            if ch1 == 6:
+                ch1 = 'X'
+            if ch1 == 5:
                 ch1 = 'P'
-
-        if ch1 == 1:
-            if (self.pts[6][1] > self.pts[8][1] and self.pts[10][1] > self.pts[12][1] and self.pts[14][1] > self.pts[16][1] and self.pts[18][1] > self.pts[20][
-                1]):
+            if ch1 == 1:
                 ch1 = 'B'
-            if (self.pts[6][1] > self.pts[8][1] and self.pts[10][1] < self.pts[12][1] and self.pts[14][1] < self.pts[16][1] and self.pts[18][1] < self.pts[20][
-                1]):
-                ch1 = 'D'
-            if (self.pts[6][1] < self.pts[8][1] and self.pts[10][1] > self.pts[12][1] and self.pts[14][1] > self.pts[16][1] and self.pts[18][1] > self.pts[20][
-                1]):
-                ch1 = 'F'
-            if (self.pts[6][1] < self.pts[8][1] and self.pts[10][1] < self.pts[12][1] and self.pts[14][1] < self.pts[16][1] and self.pts[18][1] > self.pts[20][
-                1]):
-                ch1 = 'I'
-            if (self.pts[6][1] > self.pts[8][1] and self.pts[10][1] > self.pts[12][1] and self.pts[14][1] > self.pts[16][1] and self.pts[18][1] < self.pts[20][
-                1]):
-                ch1 = 'W'
-            if (self.pts[6][1] > self.pts[8][1] and self.pts[10][1] > self.pts[12][1] and self.pts[14][1] < self.pts[16][1] and self.pts[18][1] < self.pts[20][
-                1]) and self.pts[4][1] < self.pts[9][1]:
-                ch1 = 'K'
-            if ((self.distance(self.pts[8], self.pts[12]) - self.distance(self.pts[6], self.pts[10])) < 8) and (
-                    self.pts[6][1] > self.pts[8][1] and self.pts[10][1] > self.pts[12][1] and self.pts[14][1] < self.pts[16][1] and self.pts[18][1] <
-                    self.pts[20][1]):
-                ch1 = 'U'
-            if ((self.distance(self.pts[8], self.pts[12]) - self.distance(self.pts[6], self.pts[10])) >= 8) and (
-                    self.pts[6][1] > self.pts[8][1] and self.pts[10][1] > self.pts[12][1] and self.pts[14][1] < self.pts[16][1] and self.pts[18][1] <
-                    self.pts[20][1]) and (self.pts[4][1] > self.pts[9][1]):
-                ch1 = 'V'
 
-            if (self.pts[8][0] > self.pts[12][0]) and (
-                    self.pts[6][1] > self.pts[8][1] and self.pts[10][1] > self.pts[12][1] and self.pts[14][1] < self.pts[16][1] and self.pts[18][1] <
-                    self.pts[20][1]):
-                ch1 = 'R'
-
-        if ch1 == 1 or ch1 =='E' or ch1 =='S' or ch1 =='X' or ch1 =='Y' or ch1 =='B':
-            if (self.pts[6][1] > self.pts[8][1] and self.pts[10][1] < self.pts[12][1] and self.pts[14][1] < self.pts[16][1] and self.pts[18][1] > self.pts[20][1]):
-                ch1=" "
-
-
-
-        print(self.pts[4][0] < self.pts[5][0])
-        if ch1 == 'E' or ch1=='Y' or ch1=='B':
-            if (self.pts[4][0] < self.pts[5][0]) and (self.pts[6][1] > self.pts[8][1] and self.pts[10][1] > self.pts[12][1] and self.pts[14][1] > self.pts[16][1] and self.pts[18][1] > self.pts[20][1]):
-                ch1="next"
-
-
-        if ch1 == 'Next' or ch1 == 'B' or ch1 == 'C' or ch1 == 'H' or ch1 == 'F' or ch1 == 'X':
-            if (self.pts[0][0] > self.pts[8][0] and self.pts[0][0] > self.pts[12][0] and self.pts[0][0] > self.pts[16][0] and self.pts[0][0] > self.pts[20][0]) and (self.pts[4][1] < self.pts[8][1] and self.pts[4][1] < self.pts[12][1] and self.pts[4][1] < self.pts[16][1] and self.pts[4][1] < self.pts[20][1]) and (self.pts[4][1] < self.pts[6][1] and self.pts[4][1] < self.pts[10][1] and self.pts[4][1] < self.pts[14][1] and self.pts[4][1] < self.pts[18][1]):
-                ch1 = 'Backspace'
-
-
-        if ch1=="next" and self.prev_char!="next":
-            if self.ten_prev_char[(self.count-2)%10]!="next":
-                if self.ten_prev_char[(self.count-2)%10]=="Backspace":
-                    self.str=self.str[0:-1]
-                else:
-                    if self.ten_prev_char[(self.count - 2) % 10] != "Backspace":
-                        self.str = self.str + self.ten_prev_char[(self.count-2)%10]
-            else:
-                if self.ten_prev_char[(self.count - 0) % 10] != "Backspace":
-                    self.str = self.str + self.ten_prev_char[(self.count - 0) % 10]
-
-
-        if ch1=="  " and self.prev_char!="  ":
-            self.str = self.str + "  "
+        else:
+            # ISL output conversion
+            # This would need to be customized for ISL alphabet/gestures
+            # For now, we're using the same logic as ASL but should be updated
+            if ch1 == 0:
+                ch1 = 'S'
+            if ch1 == 2:
+                ch1 = 'C'
+            if ch1 == 3:
+                ch1 = 'G'
+            if ch1 == 7:
+                ch1 = 'Y'
+            if ch1 == 4:
+                ch1 = 'L'
+            if ch1 == 6:
+                ch1 = 'X'
+            if ch1 == 5:
+                ch1 = 'P'
+            if ch1 == 1:
+                ch1 = 'B'
 
         self.prev_char=ch1
         self.current_symbol=ch1
         self.count += 1
         self.ten_prev_char[self.count%10]=ch1
-
 
         if len(self.str.strip())!=0:
             st=self.str.rfind(" ")
@@ -759,87 +888,7 @@ labels_dict = {
     519: "Clerk-1", 520: "Clerk-2", 521: "Clever", 522: "Client", 523: "Climb Down", 524: "Climb Up", 525: "Clinic", 526: "Clinical Thermometer", 527: "Clock", 528: "Clockwise", 529: "Close",
     530: "Cloth", 531: "Clouds", 532: "Clown", 533: "Coal", 534: "Coat", 535: "Cobbler", 536: "Cochin", 537: "Cock", 538: "Cockroach", 539: "Coconut-1", 540: "Coconut-2", 541: "Coded Message",
     542: "Coffee", 543: "Coherent", 544: "Cohesive", 545: "Coimbatore", 546: "Coin", 547: "Cold", 548: "Cold Drink", 549: "Collecting Agent", 550: "College", 551: "Collision", 552: "Colour Filter",
-    553: "Comb", 554: "Come", 555: "Comfortable", 556: "Committee", 557: "Common", 558: "Communicate", 559: "Communication", 560: "Compact Disc", 561: "Company", 562: "Company Joint Stock",
-    563: "Compare", 564: "Compass", 565: "Compate", 566: "Competition", 567: "Complain", 568: "Complaint", 569: "Complete",
-    570: "Compound Interest", 571: "Compound Microscope", 572: "Compression", 573: "Compromise", 574: "Compulsory", 575: "Computer",
-    576: "Computerisation", 577: "Concave Lens", 578: "Concave Mirror", 579: "Concave-Convex Lens", 580: "Concentrate", 581: "Concession",
-    582: "Conciliation", 583: "Concurrent", 584: "Condition", 585: "Conductor", 586: "Cone", 587: "Conference", 588: "Confident",
-    589: "Confidential Report", 590: "Confirmed Member", 591: "Conservation", 592: "Continent", 593: "Continue", 594: "Contraction",
-    595: "Control", 596: "Conversion", 597: "Convex Lens", 598: "Convex Mirror", 599: "Convex-Concave Lens", 600: "Conveyance Allowance",
-    601: "Cook-1", 602: "Cook-2", 603: "Coolie-1", 604: "Coolie-2", 605: "Cooperate", 606: "Coordinate", 607: "Copper", 608: "Copper Wire",
-    609: "Copy-1", 610: "Copy-2", 611: "Corn", 612: "Corresponding Branch", 613: "Corruption", 614: "Cosmetics", 615: "Cotober", 616: "Cough",
-    617: "Count", 618: "Counter", 619: "Country", 620: "Courier", 621: "Court", 622: "Cover-1", 623: "Cover-2", 624: "Cow", 625: "Crayons",
-    626: "Cream", 627: "Created", 628: "Credit", 629: "Credit Purchase", 630: "Credit Sale", 631: "Credit Voucher", 632: "Creeper",
-    633: "Cremate", 634: "Crest", 635: "Cricket", 636: "Crime", 637: "Criticize", 638: "Crocodile", 639: "Cross", 640: "Crossing",
-    641: "Crow", 642: "Crown", 643: "Cry", 644: "Cube", 645: "Cuboid", 646: "Cucumber", 647: "Cunning-1", 648: "Cunning-2", 649: "Cup",
-    650: "Cupboard", 651: "Curds-1", 652: "Curds-2", 653: "Cure", 654: "Currency Chest", 655: "Current", 656: "Curry", 657: "Curtain",
-    658: "Curvature", 659: "Curved", 660: "Custard Apple", 661: "Custody", 662: "Customer Service", 663: "Cutout", 664: "Cut-1", 665: "Cut-2",
-    666: "Cycle", 667: "Cylinder", 668: "Daily List", 669: "Dam", 670: "Dance", 671: "Dangerous", 672: "Dark", 673: "Darwer", 674: "Dasara-1",
-    675: "Dasara-2", 676: "Dasara-3", 677: "Date-1", 678: "Date-2", 679: "Daughter", 680: "Day", 681: "Day After", 682: "Day Before",
-    683: "Day Book", 684: "Deaf", 685: "Debit Advice", 686: "Debt", 687: "Debt Doubtful", 688: "Deceased", 689: "December", 690: "Decide",
-    691: "Decimal", 692: "Declaration", 693: "Decline", 694: "Decrease", 695: "Deduction At Source", 696: "Deed Of Sale", 697: "Deer",
-    698: "Default", 699: "Defend", 700: "Degree(O)", 701: "Delegate", 702: "Delete", 703: "Delhi", 704: "Delivery", 705: "Demand",
-    706: "Demand Draft", 707: "Denomination", 708: "Density", 709: "Department", 710: "Deposit", 711: "Deposit Safe Custody", 712: "Deposit Short",
-    713: "Depreciation", 714: "Depth", 715: "Deputation", 716: "Desert", 717: "Designing", 718: "Desk", 719: "Despatch", 720: "Destroy",
-    721: "Develop", 722: "Development", 723: "Devil", 724: "Dhobi", 725: "Dhothi", 726: "Diabeletes", 727: "Diabetes", 728: "Diaeases",
-    729: "Diagonal", 730: "Die", 731: "Diesel", 732: "Difference", 733: "Different", 734: "Differential Rate Of Interest", 735: "Difficult",
-    736: "Diffraction", 737: "Dig", 738: "Dim", 739: "Dinner", 740: "Diode-1", 741: "Diode-2", 742: "Direct", 743: "Direction",
-    744: "Direct Appointment", 745: "Direct Current", 746: "Dirty-1", 747: "Dirty-2", 748: "Disabled", 749: "Disagree", 750: "Disappear",
-    751: "Disapproval", 752: "Disbursement", 753: "Discharge", 754: "Discount", 755: "Discover", 756: "Discretionary Limit", 757: "Discuss",
-    758: "Diseases", 759: "Disguise", 760: "Dish", 761: "Dish Antenna", 762: "Dislike", 763: "Dismissal", 764: "Disolution", 765: "Dispersion",
-    766: "Displacement", 767: "Distance", 768: "Distribute", 769: "Distribution", 770: "District", 771: "Divide", 772: "Dividend",
-    773: "Division", 774: "Diwali", 775: "Do", 776: "Doctor", 777: "Documents", 778: "Documents Of Title", 779: "Dog", 780: "Doll",
-    781: "Dollar", 782: "Donkey", 783: "Door", 784: "Doppler Effect", 785: "Dosa", 786: "Double Entry", 787: "Double Handed", 788: "Doubt",
-    789: "Down", 790: "Draftsmen", 791: "Drama", 792: "Draw", 793: "Drawer", 794: "Drawing", 795: "Dream", 796: "Dress", 797: "Drink",
-    798: "Drive", 799: "Drop-1", 800: "Drop-2", 801: "Drown", 802: "Drum", 803: "Drumstick", 804: "Dry", 805: "Dry Cell", 806: "Dubai",
-    807: "Duck-1", 808: "Duck-2", 809: "Duplicate", 810: "Duration", 811: "Durga", 812: "During", 813: "Duster", 814: "Eagle", 815: "Earn",
-    816: "Earth", 817: "Earthquake", 818: "East", 819: "Easter-1", 820: "Easter-2", 821: "Easy", 822: "Eat", 823: "Eat the Mangoes", 824: "Echo",
-    825: "Eclipse", 826: "Economic", 827: "Edge", 828: "Education", 829: "Egg", 830: "Elbow", 831: "Election", 832: "Electrical Energy",
-    833: "Electrical Tester", 834: "Electrician", 835: "Electric Appliances", 836: "Electric Charge", 837: "Electrode", 838: "Electromagnet",
-    839: "Electromagnetic Wave", 840: "Electromotive Force", 841: "Electron", 842: "Electronics", 843: "Elephant", 844: "Eliminate",
-    845: "Embroidery-1", 846: "Embroidery-2", 847: "Emergency", 848: "Emission", 849: "Emoluments", 850: "Employment", 851: "Empty",
-    852: "Encashment", 853: "Enclosure", 854: "Encourage", 855: "End Use", 856: "Enemy", 857: "Energetic", 858: "Energy", 859: "Energymeter",
-    860: "Engagement", 861: "Engine", 862: "England", 863: "Engnieer", 864: "Enjoy", 865: "Enquiry", 866: "Entertainment", 867: "Envelope",
-    868: "Environment", 869: "Equal", 870: "Equation", 871: "Equator", 872: "Eraser", 873: "Erect", 874: "Error Of Omission", 875: "Escape",
-    876: "Essay", 877: "Establishment", 878: "Estimate", 879: "Europe", 880: "Evening-1", 881: "Evening-2", 882: "Examination-1",
-    883: "Examination-2", 884: "Examine", 885: "Exchange", 886: "Exchange Foreign", 887: "Exemption", 888: "Exercise", 889: "Exhaust Pump",
-    890: "Expansion", 891: "Expenditure", 892: "Expensive-1", 893: "Expensive-2", 894: "Experience", 895: "Experiment", 896: "Expert",
-    897: "Expiry", 898: "Explain", 899: "Export", 900: "Extension Counter", 901: "External", 902: "External Combustion Engine", 903: "Extra",
-    904: "Eye", 905: "E-Mail", 906: "Face", 907: "Face Value", 908: "Faclory", 909: "Facsimile Signature", 910: "Fail", 911: "Faith",
-    912: "Fake", 913: "Fall", 914: "False-1", 915: "False-2", 916: "Family", 917: "Famous-1", 918: "Famous-2", 919: "Fan", 920: "Fare",
-    921: "Farm", 922: "Farmer", 923: "Far-1", 924: "Far-2", 925: "Fast", 926: "Fat", 927: "Father", 928: "Father-In-Law", 929: "Fax",
-    930: "Fear", 931: "Feather", 932: "February", 933: "Feed", 934: "Feedback", 935: "Feel-1", 936: "Feel-2", 937: "Festivals", 938: "Few",
-    939: "Field", 940: "Fight", 941: "Figure", 942: "Filament", 943: "File", 944: "Fill", 945: "Film", 946: "Filter Pump", 947: "Final",
-    948: "Final Accounts", 949: "Finance", 950: "Financial Year", 951: "Find", 952: "Fine", 953: "Fingers", 954: "Finish", 955: "Fioppy",
-    956: "Fire", 957: "First Charge", 958: "First Floor", 959: "Fir(First Information Report)", 960: "Fish", 961: "Fisher Man", 962: "Fishing Net",
-    963: "Fixed Asset", 964: "Fixed Rate", 965: "Flag", 966: "Flat", 967: "Flexible", 968: "Float", 969: "Flood", 970: "Floor", 971: "Flourescence",
-    972: "Flower", 973: "Fluctuation", 974: "Fluid Pressure", 975: "Flute", 976: "Focal Length", 977: "Folio", 978: "Follow", 979: "Follow – Up Action",
-    980: "Food", 981: "Fool", 982: "Foolish", 983: "Foot", 984: "Football", 985: "Footpath", 986: "Force", 987: "Foreign", 988: "Forged",
-    989: "Forget", 990: "Form", 991: "Formula", 992: "Fossil Fuels", 993: "Fox", 994: "France", 995: "Frank", 996: "Fraud", 997: "Free",
-    998: "Freeze", 999: "Freezing", 1000: "Frequency", 1001: "Fresh", 1002: "Frictional Force", 1003: "Friday-1", 1004: "Friday-2", 1005: "Friday-3",
-    1006: "Friday-4", 1007: "Friend", 1008: "Frock", 1009: "Frog-1", 1010: "Frog-2", 1011: "From", 1012: "Fruits", 1013: "Fry", 1014: "Full Moon Day",
-    1015: "Full-1", 1016: "Full-2", 1017: "Fumiture", 1018: "Fund", 1019: "Funding", 1020: "Funeral", 1021: "Funny-1", 1022: "Funny-2", 1023: "Fuse",
-    1024: "Galaxy", 1025: "Galvanometer", 1026: "Games", 1027: "Gamma Ray", 1028: "Ganapathi-1", 1029: "Ganapathi-2", 1030: "Gardener", 1031: "Garlic",
-    1032: "Gas", 1033: "Gas Equation", 1034: "Gas Stove", 1035: "Gate", 1036: "Gazette", 1037: "General Ladger", 1038: "Generator", 1039: "Genuine",
-    1040: "Geography", 1041: "Geometry", 1042: "Geothermal Energy", 1043: "Germany", 1044: "Geyser", 1045: "Ghee", 1046: "Ghost", 1047: "Ginger",
-    1048: "Giraffe", 1049: "Girl", 1050: "Give", 1051: "Glass", 1052: "Glass Rod", 1053: "Glass Slab", 1054: "Globe", 1055: "Gloves", 1056: "Go",
-    1057: "Goa", 1058: "Goal", 1059: "Goat-1", 1060: "Goat-2", 1061: "God", 1062: "Gold", 1063: "Goods", 1064: "Goods Retumed", 1065: "Good-1",
-    1066: "Good-2", 1067: "Gossip", 1068: "Government", 1069: "Grain", 1070: "Gram", 1071: "Granddaughter", 1072: "Grandfather", 1073: "Grandmother",
-    1074: "Grandson", 1075: "Grass", 1076: "Gravity", 1077: "Green", 1078: "Grey", 1079: "Grind", 1080: "Gross", 1081: "Groundnut", 1082: "Group",
-    1083: "Grow", 1084: "Growth", 1085: "Guard", 1086: "Guilty-1", 1087: "Guilty-2", 1088: "Guitar", 1089: "Gujarati", 1090: "Gujarat-1",
-    1091: "Gujarat-2", 1092: "Gun", 1093: "Gurunanak Jayanthi", 1094: "Guwahati", 1095: "Hair", 1096: "Half – Yearly", 1097: "Halting Allowance",
-    1098: "Hammer", 1099: "Hand", 1100: "Handicapped", 1101: "Handkerchief", 1102: "Hang-1", 1103: "Hang-2", 1104: "Happy", 1105: "Harbour",
-    1106: "Hardworking-1", 1107: "Hard-1", 1108: "Hard-2", 1109: "Hariyana", 1110: "Harmonium", 1111: "Harvest", 1112: "Hate-1", 1113: "Hate-2",
-    1114: "He", 1115: "Head", 1116: "Head Office", 1117: "Head Of Income", 1118: "Health", 1119: "Hear", 1120: "Hearing",
-    1121: "Hearing Aid-1", 1122: "Hearing Aid-2", 1123: "Heart", 1124: "Hear-Listen", 1125: "Heat", 1126: "Heat Engine",
-    1127: "Heavier", 1128: "Heavy", 1129: "Heir", 1130: "Helicopter", 1131: "Help", 1132: "Hemisphere", 1133: "Hen",
-    1134: "Her", 1135: "Here", 1136: "Hers", 1137: "Herself", 1138: "Hesrt", 1139: "Hexadecimal", 1140: "Hide", 1141: "High",
-    1142: "High Resistance", 1143: "Hill", 1144: "Him", 1145: "Himachal Pradesh", 1146: "Himself", 1147: "Hindi",
-    1148: "Hindu Undivided Family", 1149: "Hindu-1", 1150: "Hindu-2", 1151: "Hip", 1152: "Hippo", 1153: "Hire Charges",
-    1154: "Hire Qurchase", 1155: "His", 1156: "History", 1157: "Hoarding", 1158: "Hockey", 1159: "Hold", 1160: "Holder",
-    1161: "Hold Hard Your Spade", 1162: "Hole", 1163: "Holi", 1164: "Holiday", 1165: "Hollow", 1166: "Holy", 1167: "Home",
-    1168: "Honorarium", 1169: "Hop", 1170: "Hope", 1171: "Horizontal", 1172: "Horns", 1173: "Horse", 1174: "Horse Cart",
-    1175: "Hospital",
+    553: "Comb", 554: "Come", 555: "Comfortable", 556: "Committee", 557: "Common", 558: "Communicate", 559: "Communication", 560: "Compact Disc", 561: "Company", 562: "Company Joint Stock"
 }
 print("Starting Application...")
 

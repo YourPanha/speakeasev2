@@ -1,0 +1,36 @@
+
+
+Required Dependencies:
+numpy
+math (Python inbuilt, no need to add)
+cv2 (opencv-python)
+os, sys, traceback, time (Python inbuilt, no need to add)
+pyttsx3
+tensorflow
+cvzone
+enchant
+tkinter (Python standard, no need to add)
+PIL (pillow)
+pip install numpy
+pip install opencv-python
+pip install opencv-python-headless
+pip install tensorflow
+pip install keras
+pip install matplotlib
+pip install pillow
+pip install scikit-learn
+pip install pyttsx3
+pip install SpeechRecognition
+pip install pyaudio
+pip install gTTS
+pip install playsound
+pip install pyautogui
+pip install tkinter
+
+run coomand 
+python -m venv .venv
+.venv\Scripts\Activate
+pip install numpy opencv-python opencv-python-headless tensorflow keras matplotlib pillow scikit-learn pyttsx3 SpeechRecognition pyaudio gTTS playsound pyautogui
+
+python final_pred.py
+
